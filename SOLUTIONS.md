@@ -1,8 +1,38 @@
 # Mini-Shop Take-Home Assessment - Solutions
 
-## Debugging Flow
+## Overview
 
-My debugging process was iterative - I ran `make up` and `make logs` after each fix to identify the next issue one by one until everything was working.
+This document outlines the debugging process and solutions implemented to fix
+the Mini-Shop application. The application is a multi-container e-commerce
+platform built with React, Node.js/Express, PostgreSQL, and Redis, orchestrated
+using Docker Compose.
+
+## Troubleshooting Flow
+
+My troubleshooting approach was iterative and systematic. I started the application
+with `make up` and used `make logs` to identify failures one at a time. Each issue
+was fixed and verified before moving to the next, creating a clear chain of
+diagnosis → root cause → fix → verification.
+
+The general flow for each bug:
+1. Run `make up` to start all services
+2. Run `make logs` to identify which service was failing and why
+3. Analyze the error message to find the root cause
+4. Apply the fix
+5. Restart with `make up` and confirm the issue was resolved
+6. Move to the next failure
+
+After resolving all 4 bugs and confirming the application worked end-to-end,
+I implemented Redis caching as the 2nd goal, followed by security and
+architectural improvements as bonus work.
+
+### Summary of changes
+- Fixed 4 bugs preventing the application from starting
+- Implemented Redis caching for the items API
+- Added nginx-level rate limiting
+- Improved health check to monitor DB and Redis
+- Moved credentials to `.env` file
+- Added automated security scanning with Trivy
 
 ---
 
@@ -275,7 +305,6 @@ http {
         location /api {
             # Apply rate limiting: allows a burst of 20 requests
             limit_req zone=api_limit burst=20 nodelay;
-            ...
         }
     }
 }
