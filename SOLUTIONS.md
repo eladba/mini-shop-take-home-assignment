@@ -250,27 +250,35 @@ node_modules
 
 This ensures `.env` files are never copied into any Docker image.
 
-### 3. Added Rate Limiting
-Added rate limiting to the API to prevent abuse — max 100 requests per minute per IP.
+### 3. Rate Limiting at nginx level
+Added rate limiting at the nginx proxy level — this is more efficient than application-level rate limiting as it blocks requests before they reach the API.
 
-Added in `api/src/index.js`:
-```javascript
-const requestCounts = {};
-app.use((req, res, next) => {
-  const ip = req.ip;
-  const now = Date.now();
-  if (!requestCounts[ip]) {
-    requestCounts[ip] = { count: 1, start: now };
-  } else if (now - requestCounts[ip].start < 60000) {
-    requestCounts[ip].count++;
-    if (requestCounts[ip].count > 100) {
-      return res.status(429).json({ error: 'Too many requests' });
+Added in `proxy/nginx.conf`:
+```nginx
+http {
+    # Allocates 10MB to track binary IP addresses
+    # Limits requests to 100 per minute
+    limit_req_zone $binary_remote_addr zone=api_limit:10m rate=100r/m;
+
+    upstream frontend {
+        server frontend:80;
     }
-  } else {
-    requestCounts[ip] = { count: 1, start: now };
-  }
-  next();
-});
+
+    upstream api {
+        server api:3000;
+    }
+
+    server {
+        listen 80;
+
+        # API routing with rate limiting
+        location /api {
+            # Apply rate limiting: allows a burst of 20 requests
+            limit_req zone=api_limit burst=20 nodelay;
+            ...
+        }
+    }
+}
 ```
 
 ### 4. Trivy Security Scan
@@ -349,7 +357,7 @@ curl http://localhost:8080/api/health
 ## Bonus: Architectural Improvements
 
 - Moved sensitive credentials from `docker-compose.yml` to `.env` file
-- Added rate limiting middleware to protect API endpoints
+- Added rate limiting at nginx level to protect API endpoints
 - Enhanced health check to monitor all critical dependencies
 - Added `make security` command for automated vulnerability scanning
 - In production, Trivy JSON output would feed into a dashboard tool like DefectDojo or Grafana for centralized security monitoring
