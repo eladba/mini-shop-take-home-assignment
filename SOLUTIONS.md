@@ -332,7 +332,12 @@ API image:        11 HIGH vulnerabilities found in Node.js internals
 
 ## Bonus: Health Check Improvements
 
-Improved the health check endpoint to verify both database and Redis connectivity:
+The health check endpoint in `api/src/index.js` was only verifying the database connection.
+Since Redis is now a critical part of the application (used for caching), it's important
+to also verify Redis connectivity. If Redis is down, the health check should reflect that
+so that monitoring systems and load balancers can react accordingly.
+
+### Changes made in `api/src/index.js`
 
 **Before:**
 ```javascript
