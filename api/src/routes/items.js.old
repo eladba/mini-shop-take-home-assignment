@@ -1,33 +1,17 @@
 const express = require('express');
 const { pool } = require('../db');
-const redis = require('redis');
 
 const router = express.Router();
 
-// Connect to Redis
-const redisClient = redis.createClient({ url: process.env.REDIS_URL });
-redisClient.connect().catch(err => console.error('Redis connection failed:', err));
-
-const CACHE_KEY = 'items:all';
-const CACHE_TTL = 60;
-
-// GET /items - List all items (with Redis cache)
+// GET /items - List all items
 router.get('/', async (req, res) => {
   try {
-    const cached = await redisClient.get(CACHE_KEY).catch(() => null);
-    if (cached) {
-      console.log('Cache HIT - returning cached items');
-      return res.json(JSON.parse(cached));
-    }
-
-    console.log('Cache MISS - fetching from database');
     const result = await pool.query('SELECT * FROM items ORDER BY id');
+    // Convert price from string to number
     const items = result.rows.map(item => ({
       ...item,
       price: parseFloat(item.price)
     }));
-
-    await redisClient.setEx(CACHE_KEY, CACHE_TTL, JSON.stringify(items)).catch(() => null);
     res.json(items);
   } catch (error) {
     console.error('Error fetching items:', error);
@@ -104,4 +88,4 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-module.exports = { router, redisClient };
+module.exports = router;

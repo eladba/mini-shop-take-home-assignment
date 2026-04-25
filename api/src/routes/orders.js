@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
+const { redisClient } = require('./items');
 
 /**
  * GET /api/orders - List all orders with their items
@@ -163,6 +164,8 @@ router.post('/', async (req, res) => {
     }
 
     await client.query('COMMIT');
+
+    await redisClient.del('items:all').catch(() => null);
 
     res.status(201).json({
       id: orderId,

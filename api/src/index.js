@@ -1,11 +1,30 @@
 const express = require('express');
 const cors = require('cors');
 const { pool, connectWithRetry } = require('./db');
-const itemsRouter = require('./routes/items');
+const { router: itemsRouter, redisClient } = require('./routes/items');
 const ordersRouter = require('./routes/orders');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Simple rate limiter - max 100 requests per minute per IP
+const requestCounts = {};
+app.use((req, res, next) => {
+  const ip = req.ip;
+  const now = Date.now();
+
+  if (!requestCounts[ip]) {
+    requestCounts[ip] = { count: 1, start: now };
+  } else if (now - requestCounts[ip].start < 60000) {
+    requestCounts[ip].count++;
+    if (requestCounts[ip].count > 100) {
+      return res.status(429).json({ error: 'Too many requests' });
+    }
+  } else {
+    requestCounts[ip] = { count: 1, start: now };
+  }
+  next();
+});
 
 // Middleware
 app.use(cors());
@@ -17,14 +36,24 @@ app.use((req, res, next) => {
   next();
 });
 
-// Health check endpoint
+// Health check endpoint - checks DB and Redis
 app.get('/health', async (req, res) => {
   try {
     await pool.query('SELECT 1');
-    res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+    await redisClient.ping();
+    res.json({
+      status: 'healthy',
+      db: 'connected',
+      redis: 'connected',
+      timestamp: new Date().toISOString()
+    });
   } catch (error) {
     console.error('Health check failed:', error.message);
-    res.status(503).json({ status: 'unhealthy', error: error.message });
+    res.status(503).json({
+      status: 'unhealthy',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
   }
 });
 

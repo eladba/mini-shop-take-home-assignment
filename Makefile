@@ -1,4 +1,4 @@
-.PHONY: up down logs logs-api logs-db logs-proxy logs-frontend shell-api shell-db clean rebuild build help
+.PHONY: up down logs logs-api logs-db logs-proxy logs-frontend shell-api shell-db clean rebuild build help security
 
 # Default target
 help:
@@ -23,6 +23,8 @@ help:
 	@echo ""
 	@echo "  make ps          - Show container status"
 	@echo "  make config      - Show resolved compose config"
+	@echo ""
+	@echo "  make security    - Run full Trivy security scan"
 	@echo ""
 
 # Start all services
@@ -103,3 +105,55 @@ test-health:
 # Test database connection
 test-db:
 	docker-compose exec db pg_isready -U minishop -d minishop
+
+# Full security scan
+security:
+	@echo "=========================================="
+	@echo "        FULL SECURITY SCAN"
+	@echo "=========================================="
+	@echo ""
+	@echo "1. Scanning for secrets in code..."
+	docker run --rm \
+		-v $(PWD):/scan \
+		aquasec/trivy:latest \
+		fs \
+		--scanners secret \
+		--format table \
+		/scan
+	@echo ""
+	@echo "2. Scanning API image for vulnerabilities..."
+	docker run --rm \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		aquasec/trivy:latest \
+		image \
+		--severity HIGH,CRITICAL \
+		mini-shop-take-home-assignment-api
+	@echo ""
+	@echo "3. Scanning Frontend image for vulnerabilities..."
+	docker run --rm \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		aquasec/trivy:latest \
+		image \
+		--severity HIGH,CRITICAL \
+		mini-shop-take-home-assignment-frontend
+	@echo ""
+	@echo "4. Scanning Proxy image for vulnerabilities..."
+	docker run --rm \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		aquasec/trivy:latest \
+		image \
+		--severity HIGH,CRITICAL \
+		mini-shop-take-home-assignment-proxy
+	@echo ""
+	@echo "5. Scanning npm dependencies..."
+	docker run --rm \
+		-v $(PWD)/api:/scan \
+		aquasec/trivy:latest \
+		fs \
+		--scanners vuln \
+		--format table \
+		/scan
+	@echo ""
+	@echo "=========================================="
+	@echo "        SCAN COMPLETE"
+	@echo "=========================================="
