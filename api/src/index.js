@@ -7,25 +7,6 @@ const ordersRouter = require('./routes/orders');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Simple rate limiter - max 100 requests per minute per IP
-const requestCounts = {};
-app.use((req, res, next) => {
-  const ip = req.ip;
-  const now = Date.now();
-
-  if (!requestCounts[ip]) {
-    requestCounts[ip] = { count: 1, start: now };
-  } else if (now - requestCounts[ip].start < 60000) {
-    requestCounts[ip].count++;
-    if (requestCounts[ip].count > 100) {
-      return res.status(429).json({ error: 'Too many requests' });
-    }
-  } else {
-    requestCounts[ip] = { count: 1, start: now };
-  }
-  next();
-});
-
 // Middleware
 app.use(cors());
 app.use(express.json());
