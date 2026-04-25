@@ -311,7 +311,14 @@ http {
 ```
 
 ### 4. Trivy Security Scan
-Added `make security` command that runs a full Trivy security scan across all services.
+Added `make security` command to the `Makefile` that runs a full automated security
+scan across all services. The scan covers 5 areas:
+
+1. **Secrets in code** — scans the entire codebase for exposed credentials
+2. **API image** — scans for HIGH/CRITICAL vulnerabilities in the Node.js image
+3. **Frontend image** — scans for vulnerabilities in the nginx/React image
+4. **Proxy image** — scans for vulnerabilities in the nginx proxy image
+5. **npm dependencies** — scans `api/package-lock.json` for vulnerable packages
 
 ```bash
 make security
@@ -319,14 +326,18 @@ make security
 
 **Results:**
 ```
-Secrets scan:     PASSED
-Frontend image:   PASSED
-Proxy image:      PASSED
-npm dependencies: PASSED
-API image:        11 HIGH vulnerabilities found in Node.js internals
-                  (cross-spawn, glob, minimatch, tar)
-                  Fix: upgrade Node.js base image to latest LTS
+1. Secrets scan:     PASSED - no secrets found in codebase
+2. API image:        11 HIGH vulnerabilities found in Node.js internals
+                     (cross-spawn, glob, minimatch, tar)
+                     Fix: upgrade Node.js base image to latest LTS
+3. Frontend image:   PASSED - 0 vulnerabilities
+4. Proxy image:      PASSED - 0 vulnerabilities
+5. npm dependencies: PASSED - 0 vulnerabilities
 ```
+
+The vulnerabilities found in the API image are in Node.js internal packages
+(not in the application code itself) and all have available fixes via a
+Node.js base image upgrade.
 
 ---
 
