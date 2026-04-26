@@ -1,34 +1,38 @@
-.PHONY: up down logs logs-api logs-db logs-proxy logs-frontend shell-api shell-db clean rebuild build help security
+.PHONY: up down logs logs-api logs-db logs-proxy logs-frontend shell-api shell-db clean rebuild build help security ps config test-health test-db
 
 # Default target
 help:
 	@echo "Mini-Shop Development Commands"
 	@echo "=============================="
 	@echo ""
-	@echo "  make up          - Start all services"
-	@echo "  make down        - Stop all services"
-	@echo "  make build       - Build all images"
-	@echo "  make rebuild     - Clean rebuild everything"
-	@echo "  make clean       - Remove containers, volumes, images"
+	@echo "  make up           - Start all services (auto-creates .env)"
+	@echo "  make down         - Stop all services"
+	@echo "  make build        - Build all images"
+	@echo "  make rebuild      - Clean rebuild everything"
+	@echo "  make clean        - Remove containers, volumes, images"
 	@echo ""
-	@echo "  make logs        - View all logs"
-	@echo "  make logs-api    - View API logs"
-	@echo "  make logs-db     - View database logs"
-	@echo "  make logs-proxy  - View proxy logs"
+	@echo "  make logs         - View all logs"
+	@echo "  make logs-api     - View API logs"
+	@echo "  make logs-db      - View database logs"
+	@echo "  make logs-proxy   - View proxy logs"
 	@echo "  make logs-frontend - View frontend logs"
 	@echo ""
-	@echo "  make shell-api   - Shell into API container"
-	@echo "  make shell-db    - Shell into DB container"
-	@echo "  make shell-proxy - Shell into proxy container"
+	@echo "  make shell-api    - Shell into API container"
+	@echo "  make shell-db     - Shell into DB container"
+	@echo "  make shell-proxy  - Shell into proxy container"
 	@echo ""
-	@echo "  make ps          - Show container status"
-	@echo "  make config      - Show resolved compose config"
+	@echo "  make ps           - Show container status"
+	@echo "  make config       - Show resolved compose config"
 	@echo ""
-	@echo "  make security    - Run full Trivy security scan"
+	@echo "  make security     - Run full Trivy security scan"
 	@echo ""
 
 # Start all services
 up:
+	@if [ ! -f .env ]; then \
+		echo "Creating .env from .env.example..."; \
+		cp .env.example .env; \
+	fi
 	docker-compose up --build -d
 	@echo ""
 	@echo "Services starting... Check status with: make ps"
@@ -91,6 +95,7 @@ clean:
 
 # Rebuild from scratch
 rebuild: clean
+	@if [ ! -f .env ]; then cp .env.example .env; fi
 	docker-compose build --no-cache
 	docker-compose up -d
 	@echo ""
